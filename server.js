@@ -9,6 +9,7 @@ const { Pool } = require("pg");
 const app = express();
 const port = process.env.PORT || 3000;
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
+app.set("trust proxy", 1);
 
 if (!process.env.DATABASE_URL) {
   console.warn("DATABASE_URL is not set. PostgreSQL-backed API will not start correctly.");
@@ -297,11 +298,11 @@ app.get("/api/session", (req, res) => {
 });
 
 app.post("/api/login", (req, res) => {
-  const expectedUser = process.env.ADMIN_USER || "admin";
-  const expectedPassword = process.env.ADMIN_PASSWORD || "admin";
+  const expectedUser = String(process.env.ADMIN_USER || "admin").trim();
+  const expectedPassword = String(process.env.ADMIN_PASSWORD || "admin").trim();
   const { username = "", password = "" } = req.body || {};
   const normalizedUsername = String(username).trim();
-  const normalizedPassword = String(password);
+  const normalizedPassword = String(password).trim();
 
   if (normalizedUsername === expectedUser && normalizedPassword === expectedPassword) {
     req.session.admin = true;
@@ -310,7 +311,11 @@ app.post("/api/login", (req, res) => {
     return;
   }
 
-  console.warn(`Failed admin login for user "${normalizedUsername || "empty"}"`);
+  console.warn(
+    `Failed admin login for user "${normalizedUsername || "empty"}" ` +
+      `(user length ${normalizedUsername.length}/${expectedUser.length}, ` +
+      `password length ${normalizedPassword.length}/${expectedPassword.length})`,
+  );
   res.status(401).json({ error: "Неверный логин или пароль" });
 });
 
