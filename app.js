@@ -339,6 +339,8 @@ const elements = {
   pipeline: document.querySelector("#pipeline"),
   leadForm: document.querySelector("#leadForm"),
   ordersTable: document.querySelector("#ordersTable"),
+  orderModal: document.querySelector("#orderModal"),
+  orderDetails: document.querySelector("#orderDetails"),
   orderStatusFilter: document.querySelector("#orderStatusFilter"),
   clientList: document.querySelector("#clientList"),
   clientSearch: document.querySelector("#clientSearch"),
@@ -481,6 +483,10 @@ function minQtyLabel(product) {
 
 function orderTotal(order) {
   return order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
+}
+
+function orderItemTitle(item) {
+  return productById(item.productId)?.name || item.productId;
 }
 
 function showToast(message) {
@@ -693,6 +699,9 @@ function renderOrders() {
             <td data-label="Сумма"><strong>${formatMoney(orderTotal(order))}</strong></td>
             <td data-label="Статус"><span class="status-pill ${statusClass(order.status)}">${order.status}</span></td>
             <td data-label="Действие">
+              <button class="status-button" type="button" data-view-order="${order.id}">
+                Детали
+              </button>
               <button class="status-button" type="button" data-next-order="${order.id}">
                 Следующий статус
               </button>
@@ -704,6 +713,67 @@ function renderOrders() {
         `,
       )
       .join("") || `<tr><td colspan="5">Заявок с таким статусом нет</td></tr>`;
+}
+
+function openOrderDetails(orderId) {
+  if (!elements.orderModal || !elements.orderDetails) return;
+  const order = state.orders.find((item) => item.id === Number(orderId));
+  if (!order) return;
+
+  elements.orderDetails.innerHTML = `
+    <div class="order-detail-grid">
+      <div>
+        <span>Номер</span>
+        <strong>#${order.id}</strong>
+      </div>
+      <div>
+        <span>Дата</span>
+        <strong>${escapeHtml(order.createdAt || "")}</strong>
+      </div>
+      <div>
+        <span>Клиент</span>
+        <strong>${escapeHtml(order.clientName)}</strong>
+      </div>
+      <div>
+        <span>Телефон</span>
+        <strong>${escapeHtml(order.phone)}</strong>
+      </div>
+      <div>
+        <span>Статус</span>
+        <strong>${escapeHtml(order.status)}</strong>
+      </div>
+      <div>
+        <span>Сумма</span>
+        <strong>${formatMoney(orderTotal(order))}</strong>
+      </div>
+    </div>
+    <div class="order-comment">
+      <span>Комментарий</span>
+      <p>${escapeHtml(order.comment || "Без комментария")}</p>
+    </div>
+    <div class="order-items-list">
+      ${order.items
+        .map(
+          (item) => `
+            <div class="order-item-row">
+              <span>${escapeHtml(orderItemTitle(item))}</span>
+              <strong>${item.qty} × ${formatMoney(item.price)}</strong>
+              <em>${formatMoney(item.qty * item.price)}</em>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+  elements.orderModal.classList.add("open");
+  elements.orderModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+}
+
+function closeOrderDetails() {
+  elements.orderModal?.classList.remove("open");
+  elements.orderModal?.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
 }
 
 function statusClass(status) {
@@ -1114,12 +1184,14 @@ function bindEvents() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeCart();
+    if (event.key === "Escape") closeOrderDetails();
   });
 
   document.addEventListener("click", (event) => {
     const addProductId = event.target.closest("[data-add-product]")?.dataset.addProduct;
     const incProductId = event.target.closest("[data-inc]")?.dataset.inc;
     const decProductId = event.target.closest("[data-dec]")?.dataset.dec;
+    const viewOrderId = event.target.closest("[data-view-order]")?.dataset.viewOrder;
     const nextOrderId = event.target.closest("[data-next-order]")?.dataset.nextOrder;
     const moveButton = event.target.closest("[data-move-deal]");
     const deleteDealId = event.target.closest("[data-delete-deal]")?.dataset.deleteDeal;
@@ -1129,11 +1201,14 @@ function bindEvents() {
     if (addProductId) addToCart(addProductId);
     if (incProductId) changeCartQty(incProductId, 1);
     if (decProductId) changeCartQty(decProductId, -1);
+    if (viewOrderId) openOrderDetails(viewOrderId);
     if (nextOrderId) moveOrderToNextStatus(nextOrderId);
     if (moveButton) moveDeal(moveButton.dataset.moveDeal, moveButton.dataset.direction);
     if (deleteDealId) deleteDeal(deleteDealId);
     if (deleteOrderId) deleteOrder(deleteOrderId);
     if (deleteProductId) deleteProduct(deleteProductId);
+    if (event.target.closest("[data-close-order-modal]")) closeOrderDetails();
+    if (event.target === elements.orderModal) closeOrderDetails();
   });
 
   document.addEventListener("change", (event) => {

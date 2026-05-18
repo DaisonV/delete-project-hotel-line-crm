@@ -24,6 +24,8 @@ DATABASE_URL=postgres://user:password@host:5432/database
 ADMIN_USER=admin
 ADMIN_PASSWORD=secure-password
 SESSION_SECRET=long-random-string
+TELEGRAM_BOT_TOKEN=optional-bot-token
+TELEGRAM_CHAT_ID=optional-chat-id
 ```
 
 Для локальных фото можно оставить стандартную папку `uploads/`.
@@ -66,3 +68,14 @@ SESSION_SECRET=long-random-string
 - `ADMIN_USER`
 - `ADMIN_PASSWORD`
 - `SESSION_SECRET`
+
+## Telegram Уведомления
+
+Чтобы получать заявки в Telegram:
+
+1. Создай бота через `@BotFather`.
+2. Сохрани токен в Render как `TELEGRAM_BOT_TOKEN`.
+3. Узнай свой chat id и сохрани как `TELEGRAM_CHAT_ID`.
+4. Сделай redeploy.
+
+Если эти переменные пустые, сайт работает без уведомлений.

@@ -125,6 +125,59 @@ function toLead(row) {
   };
 }
 
+function formatMoney(value) {
+  return new Intl.NumberFormat("ru-RU", {
+    style: "currency",
+    currency: "KZT",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+}
+
+async function notifyTelegram(order) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+
+  const state = await getState();
+  const productsById = new Map(state.products.map((product) => [product.id, product]));
+  const lines = order.items.map((item) => {
+    const product = productsById.get(item.productId);
+    const name = product?.name || item.productId;
+    return `• ${name}: ${item.qty} × ${formatMoney(item.price)}`;
+  });
+  const total = order.items.reduce((sum, item) => sum + item.qty * item.price, 0);
+  const text = [
+    `Новая заявка #${order.id}`,
+    `Клиент: ${order.clientName}`,
+    `Телефон: ${order.phone}`,
+    `Сумма: ${formatMoney(total)}`,
+    order.comment ? `Комментарий: ${order.comment}` : "",
+    "",
+    "Товары:",
+    lines.join("\n"),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        disable_web_page_preview: true,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`Telegram notification failed: ${response.status}`);
+    }
+  } catch (error) {
+    console.warn(`Telegram notification failed: ${error.message}`);
+  }
+}
+
 async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS products (
@@ -297,7 +350,11 @@ app.post("/api/orders", async (req, res, next) => {
       );
     }
     await client.query("COMMIT");
-    res.status(201).json((await getState()).orders.find((item) => item.id === order.id));
+    const savedOrder = (await getState()).orders.find((item) => item.id === order.id);
+    notifyTelegram(savedOrder).catch((error) => {
+      console.warn(`Telegram notification failed: ${error.message}`);
+    });
+    res.status(201).json(savedOrder);
   } catch (error) {
     await client.query("ROLLBACK");
     next(error);
