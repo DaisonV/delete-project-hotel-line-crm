@@ -59,6 +59,19 @@ const seedProducts = [
   ["bedding-set", "Комплект постельного белья", "Постельное белье", "комплект", 17500, 5, 120, "Подушковая накидка 53x83 см, простыня 260x280 см, пододеяльник 230x220 см. Состав 60% хлопок, 40%.", "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=700&q=80"],
 ];
 
+const defaultSiteSettings = {
+  companyName: "Hotel Line",
+  phone: "+7 707 389 5651",
+  address: "Казахстан, Алматы",
+  whatsappUrl: "https://wa.me/77073895651",
+  telegramUrl: "",
+  instagramUrl: "",
+  termsUrl: "/terms",
+  deliveryUrl: "/delivery",
+  privacyUrl: "/privacy",
+  returnsUrl: "/returns",
+};
+
 app.use(express.json({ limit: "1mb" }));
 app.use("/uploads", express.static(uploadDir));
 app.use(
@@ -141,6 +154,12 @@ function normalizeOrderQty(product, qty) {
   const requestedQty = Math.floor(Number(qty) || minQty);
   if (requestedQty <= minQty) return minQty;
   return minQty + Math.ceil((requestedQty - minQty) / orderStep) * orderStep;
+}
+
+function normalizeSiteSettings(settings = {}) {
+  return Object.fromEntries(
+    Object.entries(defaultSiteSettings).map(([key, value]) => [key, String(settings[key] ?? value).trim()]),
+  );
 }
 
 async function notifyTelegram(order) {
@@ -231,9 +250,21 @@ async function initDb() {
       status TEXT NOT NULL DEFAULT 'Новый',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS site_settings (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 
   await pool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS order_step INTEGER NOT NULL DEFAULT 1");
+  await pool.query(
+    `INSERT INTO site_settings (id, settings)
+     VALUES (1, $1::jsonb)
+     ON CONFLICT (id) DO NOTHING`,
+    [JSON.stringify(defaultSiteSettings)],
+  );
 
   const { rows } = await pool.query("SELECT COUNT(*)::int AS count FROM products");
   if (rows[0].count === 0) {
@@ -268,11 +299,12 @@ async function waitForDatabase() {
 }
 
 async function getState() {
-  const [productsResult, ordersResult, itemsResult, leadsResult] = await Promise.all([
+  const [productsResult, ordersResult, itemsResult, leadsResult, settingsResult] = await Promise.all([
     pool.query("SELECT * FROM products ORDER BY created_at DESC, name ASC"),
     pool.query("SELECT * FROM orders ORDER BY id DESC"),
     pool.query("SELECT * FROM order_items ORDER BY id ASC"),
     pool.query("SELECT * FROM leads ORDER BY id DESC"),
+    pool.query("SELECT settings FROM site_settings WHERE id = 1"),
   ]);
 
   const itemsByOrder = new Map();
@@ -298,6 +330,7 @@ async function getState() {
       items: itemsByOrder.get(row.id) || [],
     })),
     leads: leadsResult.rows.map(toLead),
+    settings: normalizeSiteSettings(settingsResult.rows[0]?.settings),
   };
 }
 
@@ -345,6 +378,23 @@ app.post("/api/logout", requireAdminApi, (req, res, next) => {
 app.get("/api/state", async (_req, res, next) => {
   try {
     res.json(await getState());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch("/api/settings", requireAdminApi, async (req, res, next) => {
+  try {
+    const settings = normalizeSiteSettings(req.body || {});
+    const result = await pool.query(
+      `INSERT INTO site_settings (id, settings)
+       VALUES (1, $1::jsonb)
+       ON CONFLICT (id) DO UPDATE
+       SET settings = EXCLUDED.settings, updated_at = now()
+       RETURNING settings`,
+      [JSON.stringify(settings)],
+    );
+    res.json(normalizeSiteSettings(result.rows[0]?.settings));
   } catch (error) {
     next(error);
   }
@@ -550,6 +600,10 @@ app.get("/login", (_req, res) => {
 
 app.get("/login.html", (_req, res) => {
   res.sendFile(path.join(__dirname, "login.html"));
+});
+
+app.get(["/terms", "/delivery", "/privacy", "/returns", "/legal"], (_req, res) => {
+  res.sendFile(path.join(__dirname, "legal.html"));
 });
 
 app.get("/app.js", (_req, res) => {

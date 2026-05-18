@@ -85,6 +85,65 @@ button {
   padding: 26px;
 }
 
+.site-footer {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.6fr);
+  gap: 28px;
+  margin: 0 26px 26px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.footer-brand {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.footer-brand strong {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.footer-brand span,
+.footer-links span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.footer-grid h2 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.footer-links {
+  display: grid;
+  gap: 7px;
+}
+
+.footer-links a {
+  width: fit-content;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  color: var(--accent);
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -445,6 +504,53 @@ button {
     url("https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=900&q=80");
   background-position: center;
   background-size: cover;
+}
+
+.legal-page {
+  display: grid;
+  gap: 14px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.legal-intro,
+.legal-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.legal-intro {
+  padding: 22px;
+}
+
+.legal-intro h1 {
+  max-width: 760px;
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.legal-intro p,
+.legal-card p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.legal-card {
+  padding: 18px 22px;
+}
+
+.legal-card h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.legal-card p:last-child {
+  margin-bottom: 0;
 }
 
 .catalog-toolbar {
@@ -909,7 +1015,8 @@ th {
   padding: 7px 9px;
 }
 
-.product-create-form {
+.product-create-form,
+.settings-form {
   display: grid;
   grid-template-columns: repeat(6, minmax(110px, 1fr));
   gap: 12px;
@@ -924,7 +1031,8 @@ th {
   grid-column: span 2;
 }
 
-.product-create-form .primary-button {
+.product-create-form .primary-button,
+.settings-form .primary-button {
   align-self: end;
 }
 
@@ -1271,6 +1379,15 @@ th {
     padding: 14px;
   }
 
+  .site-footer {
+    grid-template-columns: 1fr;
+    margin: 0 14px 14px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+
   .public-header {
     gap: 10px;
   }
@@ -1337,7 +1454,8 @@ th {
     grid-template-columns: 1fr;
   }
 
-  .product-create-form {
+  .product-create-form,
+  .settings-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1474,6 +1592,20 @@ th {
 
   .public-main {
     padding: 10px;
+  }
+
+  .site-footer {
+    margin: 0 10px 10px;
+    padding: 16px;
+  }
+
+  .legal-intro,
+  .legal-card {
+    padding: 16px;
+  }
+
+  .legal-intro h1 {
+    font-size: 26px;
   }
 
   .catalog-panel,
@@ -1658,6 +1790,7 @@ th {
   }
 
   .product-create-form,
+  .settings-form,
   .product-editor-card,
   .product-editor-fields {
     grid-template-columns: 1fr;

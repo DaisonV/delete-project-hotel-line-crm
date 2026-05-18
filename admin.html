@@ -38,6 +38,10 @@
             <span class="nav-icon">04</span>
             Товары
           </button>
+          <button class="nav-button" type="button" data-view="settings">
+            <span class="nav-icon">05</span>
+            Сайт
+          </button>
         </nav>
 
         <div class="sidebar-note">
@@ -233,6 +237,60 @@
               <button class="primary-button full" type="submit">Добавить товар</button>
             </form>
             <div class="product-editor-list" id="productSettings"></div>
+          </section>
+        </section>
+
+        <section class="view" id="settingsView" aria-labelledby="settingsHeading">
+          <section class="workspace-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">сайт</p>
+                <h2 id="settingsHeading">Контакты и документы</h2>
+              </div>
+            </div>
+            <form class="settings-form" id="settingsForm">
+              <label>
+                Название компании
+                <input name="companyName" required placeholder="Hotel Line" />
+              </label>
+              <label>
+                Телефон
+                <input name="phone" placeholder="+7 707 389 5651" />
+              </label>
+              <label class="wide-field">
+                Адрес
+                <input name="address" placeholder="Казахстан, Алматы" />
+              </label>
+              <label>
+                WhatsApp
+                <input name="whatsappUrl" placeholder="https://wa.me/77073895651" />
+              </label>
+              <label>
+                Telegram
+                <input name="telegramUrl" placeholder="https://t.me/hotelline" />
+              </label>
+              <label>
+                Instagram
+                <input name="instagramUrl" placeholder="https://instagram.com/hotelline" />
+              </label>
+              <label>
+                Пользовательское соглашение
+                <input name="termsUrl" placeholder="/terms" />
+              </label>
+              <label>
+                Условия доставки
+                <input name="deliveryUrl" placeholder="/delivery" />
+              </label>
+              <label>
+                Политика конфиденциальности
+                <input name="privacyUrl" placeholder="/privacy" />
+              </label>
+              <label>
+                Возврат и обмен
+                <input name="returnsUrl" placeholder="/returns" />
+              </label>
+              <button class="primary-button full wide-field" type="submit">Сохранить настройки сайта</button>
+            </form>
           </section>
         </section>
       </main>

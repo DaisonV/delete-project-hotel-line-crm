@@ -253,8 +253,22 @@ const deprecatedProductIds = new Set([
 const page = document.body.dataset.page || "store";
 const isAdminPage = page === "admin";
 
+const defaultSiteSettings = {
+  companyName: "Hotel Line",
+  phone: "+7 707 389 5651",
+  address: "Казахстан, Алматы",
+  whatsappUrl: "https://wa.me/77073895651",
+  telegramUrl: "",
+  instagramUrl: "",
+  termsUrl: "/terms",
+  deliveryUrl: "/delivery",
+  privacyUrl: "/privacy",
+  returnsUrl: "/returns",
+};
+
 const demoState = {
   products: structuredClone(defaultProducts),
+  settings: structuredClone(defaultSiteSettings),
   cart: {},
   orders: [
     {
@@ -325,6 +339,11 @@ const elements = {
   productGrid: document.querySelector("#productGrid"),
   productSettings: document.querySelector("#productSettings"),
   productForm: document.querySelector("#productForm"),
+  settingsForm: document.querySelector("#settingsForm"),
+  footerCompany: document.querySelector("#footerCompany"),
+  footerContacts: document.querySelector("#footerContacts"),
+  footerSocials: document.querySelector("#footerSocials"),
+  footerLegal: document.querySelector("#footerLegal"),
   cartCount: document.querySelector("#cartCount"),
   mobileCartBar: document.querySelector(".mobile-cart-bar"),
   mobileCartCount: document.querySelector("#mobileCartCount"),
@@ -359,6 +378,7 @@ const viewTitles = {
   orders: "Заявки",
   clients: "Клиенты",
   products: "Товары",
+  settings: "Настройки сайта",
 };
 
 let state = loadState();
@@ -374,6 +394,7 @@ function loadState() {
   try {
     const merged = { ...structuredClone(demoState), ...JSON.parse(saved) };
     merged.products = normalizeProducts(merged.products);
+    merged.settings = normalizeSiteSettings(merged.settings);
     return merged;
   } catch {
     return structuredClone(demoState);
@@ -407,6 +428,12 @@ function normalizeProduct(product = {}) {
   };
 }
 
+function normalizeSiteSettings(settings = {}) {
+  return Object.fromEntries(
+    Object.entries(defaultSiteSettings).map(([key, value]) => [key, String(settings[key] ?? value).trim()]),
+  );
+}
+
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
@@ -434,6 +461,7 @@ async function syncFromApi() {
     products: (remoteState.products || []).map(normalizeProduct),
     orders: remoteState.orders || [],
     leads: remoteState.leads || [],
+    settings: normalizeSiteSettings(remoteState.settings),
   };
   products = state.products;
   normalizeCart();
@@ -504,6 +532,24 @@ function minQtyLabel(product) {
   return `Мин. заказ: ${product.minQty} ${product.unit}${stepText}`;
 }
 
+function safeUrl(value, fallback = "") {
+  const url = String(value || "").trim();
+  if (!url) return fallback;
+  if (/^(https?:\/\/|\/(?!\/)|#|tel:|mailto:)/i.test(url)) return url;
+  return fallback;
+}
+
+function phoneUrl(phone) {
+  const cleaned = String(phone || "").replace(/[^\d+]/g, "");
+  return cleaned ? `tel:${cleaned}` : "";
+}
+
+function linkMarkup(href, label) {
+  const safeHref = safeUrl(href);
+  if (!safeHref || !label) return "";
+  return `<a href="${escapeHtml(safeHref)}">${escapeHtml(label)}</a>`;
+}
+
 function orderTotal(order) {
   return order.items.reduce((sum, item) => sum + item.price * item.qty, 0);
 }
@@ -542,6 +588,42 @@ function renderCategories() {
     .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
     .join("");
   elements.categoryFilter.value = categories.includes(selectedCategory) ? selectedCategory : "Все";
+}
+
+function renderSiteSettings() {
+  const settings = normalizeSiteSettings(state.settings);
+  state.settings = settings;
+
+  if (elements.footerCompany) {
+    elements.footerCompany.textContent = settings.companyName || defaultSiteSettings.companyName;
+  }
+
+  if (elements.footerContacts) {
+    const contacts = [
+      linkMarkup(phoneUrl(settings.phone), settings.phone),
+      settings.address ? `<span>${escapeHtml(settings.address)}</span>` : "",
+    ].filter(Boolean);
+    elements.footerContacts.innerHTML = contacts.join("") || `<span>Контакты скоро появятся</span>`;
+  }
+
+  if (elements.footerSocials) {
+    const socials = [
+      linkMarkup(settings.whatsappUrl, "WhatsApp"),
+      linkMarkup(settings.telegramUrl, "Telegram"),
+      linkMarkup(settings.instagramUrl, "Instagram"),
+    ].filter(Boolean);
+    elements.footerSocials.innerHTML = socials.join("") || `<span>Соцсети скоро появятся</span>`;
+  }
+
+  if (elements.footerLegal) {
+    const legal = [
+      linkMarkup(settings.termsUrl, "Пользовательское соглашение"),
+      linkMarkup(settings.deliveryUrl, "Условия доставки"),
+      linkMarkup(settings.privacyUrl, "Политика конфиденциальности"),
+      linkMarkup(settings.returnsUrl, "Возврат и обмен"),
+    ].filter(Boolean);
+    elements.footerLegal.innerHTML = legal.join("");
+  }
 }
 
 function renderProducts() {
@@ -948,7 +1030,17 @@ function renderProductSettings() {
     .join("");
 }
 
+function renderSettingsForm() {
+  if (!elements.settingsForm) return;
+  const settings = normalizeSiteSettings(state.settings);
+  Object.entries(settings).forEach(([key, value]) => {
+    const field = elements.settingsForm.elements[key];
+    if (field && field.value !== value) field.value = value;
+  });
+}
+
 function render() {
+  renderSiteSettings();
   renderProducts();
   renderCart();
   renderMetrics();
@@ -956,6 +1048,7 @@ function render() {
   renderOrders();
   renderClients();
   renderProductSettings();
+  renderSettingsForm();
   saveState();
 }
 
@@ -1226,6 +1319,18 @@ function readProductImageLocally(productId, file) {
   reader.readAsDataURL(file);
 }
 
+async function updateSiteSettings(formData) {
+  const settings = normalizeSiteSettings(
+    Object.fromEntries(Object.keys(defaultSiteSettings).map((key) => [key, formData.get(key) || ""])),
+  );
+  const savedSettings = await apiRequest("/settings", jsonOptions(settings, "PATCH"));
+  state.settings = normalizeSiteSettings(savedSettings || settings);
+  saveState();
+  renderSiteSettings();
+  renderSettingsForm();
+  showToast("Настройки сайта сохранены");
+}
+
 function bindEvents() {
   elements.navButtons.forEach((button) => {
     button.addEventListener("click", () => switchView(button.dataset.view));
@@ -1297,6 +1402,11 @@ function bindEvents() {
   elements.productForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     createProduct(new FormData(elements.productForm));
+  });
+
+  elements.settingsForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    updateSiteSettings(new FormData(elements.settingsForm));
   });
 
   elements.seedButton?.addEventListener("click", () => {
