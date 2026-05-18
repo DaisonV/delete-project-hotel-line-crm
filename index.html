@@ -89,9 +89,18 @@
     </div>
 
     <div class="cart-overlay" data-close-cart></div>
-    <button class="mobile-cart-bar" type="button" data-open-cart>
-      <span class="mobile-cart-title">Корзина</span>
-      <strong id="mobileCartTotal">0 ₸</strong>
+    <button class="mobile-cart-bar" type="button" data-open-cart aria-label="Открыть корзину">
+      <span class="mobile-cart-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M6.2 6.2h14l-1.4 7.3a2 2 0 0 1-2 1.6H9a2 2 0 0 1-2-1.7L5.8 4.8H3.5" />
+          <circle cx="9.5" cy="19" r="1.2" />
+          <circle cx="17" cy="19" r="1.2" />
+        </svg>
+      </span>
+      <span class="mobile-cart-copy">
+        <span class="mobile-cart-title">Корзина</span>
+        <strong id="mobileCartTotal">0 ₸</strong>
+      </span>
       <small><span id="mobileCartCount">0</span></small>
     </button>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
