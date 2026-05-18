@@ -139,6 +139,26 @@ async function initDb() {
   }
 }
 
+async function waitForDatabase() {
+  const maxAttempts = Number(process.env.DB_CONNECT_ATTEMPTS || 30);
+  const delayMs = Number(process.env.DB_CONNECT_DELAY_MS || 3000);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await pool.query("SELECT 1");
+      return;
+    } catch (error) {
+      const isLastAttempt = attempt === maxAttempts;
+      console.warn(
+        `Database is not ready yet (${attempt}/${maxAttempts}): ${error.code || error.message}`,
+      );
+
+      if (isLastAttempt) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 async function getState() {
   const [productsResult, ordersResult, itemsResult, leadsResult] = await Promise.all([
     pool.query("SELECT * FROM products ORDER BY created_at DESC, name ASC"),
@@ -374,7 +394,8 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
-initDb()
+waitForDatabase()
+  .then(initDb)
   .then(() => {
     app.listen(port, () => {
       console.log(`Hotel Line CRM is running on port ${port}`);
