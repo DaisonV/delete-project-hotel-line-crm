@@ -965,7 +965,6 @@ function addToCart(productId) {
   const currentQty = state.cart[productId] || 0;
   const step = orderStep(product);
   state.cart[productId] = currentQty ? normalizeCartQty(product, currentQty + step) : product.minQty;
-  showToast(currentQty ? `Добавлено ${step} ${product.unit}` : `${product.name}: добавлен минимум ${product.minQty} ${product.unit}`);
   renderCartState();
 }
 
@@ -975,7 +974,6 @@ function changeCartQty(productId, delta) {
   const nextQty = (state.cart[productId] || 0) + delta * orderStep(product);
   if (nextQty < product.minQty) {
     delete state.cart[productId];
-    showToast("Товар удален из корзины");
   } else {
     state.cart[productId] = normalizeCartQty(product, nextQty);
   }
