@@ -434,7 +434,7 @@ async function ensureAdminSession() {
   if (!isAdminPage || window.location.protocol === "file:") return;
   const session = await apiRequest("/session");
   if (session && !session.authenticated) {
-    window.location.href = `/login.html?next=${encodeURIComponent(window.location.pathname)}`;
+    window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
   }
 }
 
@@ -1249,7 +1249,7 @@ function bindEvents() {
 
   elements.logoutButton?.addEventListener("click", async () => {
     await apiRequest("/logout", { method: "POST" });
-    window.location.href = "/login.html";
+    window.location.href = "/login";
   });
 }
 

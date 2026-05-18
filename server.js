@@ -90,7 +90,7 @@ function requireAdminPage(req, res, next) {
     next();
     return;
   }
-  res.redirect(`/login.html?next=${encodeURIComponent(req.originalUrl)}`);
+  res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
 }
 
 function requireAdminApi(req, res, next) {

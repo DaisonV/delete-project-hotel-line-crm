@@ -55,8 +55,8 @@ TELEGRAM_CHAT_ID=optional-chat-id
 ## Страницы
 
 - `/` - клиентская витрина
-- `/admin.html` или `/admin` - админка/CRM
-- `/login.html` или `/login` - вход в админку
+- `/admin` - админка/CRM
+- `/login` - вход в админку
 - `/api/health` - проверка API
 
 ## Админка
