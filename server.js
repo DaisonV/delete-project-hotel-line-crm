@@ -299,15 +299,18 @@ app.get("/api/session", (req, res) => {
 app.post("/api/login", (req, res) => {
   const expectedUser = process.env.ADMIN_USER || "admin";
   const expectedPassword = process.env.ADMIN_PASSWORD || "admin";
-  const { username, password } = req.body;
+  const { username = "", password = "" } = req.body || {};
+  const normalizedUsername = String(username).trim();
+  const normalizedPassword = String(password);
 
-  if (username === expectedUser && password === expectedPassword) {
+  if (normalizedUsername === expectedUser && normalizedPassword === expectedPassword) {
     req.session.admin = true;
-    req.session.username = username;
+    req.session.username = normalizedUsername;
     res.json({ ok: true });
     return;
   }
 
+  console.warn(`Failed admin login for user "${normalizedUsername || "empty"}"`);
   res.status(401).json({ error: "Неверный логин или пароль" });
 });
 

@@ -47,22 +47,32 @@
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        const button = form.querySelector("button");
         errorBox.textContent = "";
+        button.disabled = true;
+        button.textContent = "Проверяем...";
 
-        const response = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(Object.fromEntries(new FormData(form))),
-        });
+        try {
+          const response = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(Object.fromEntries(new FormData(form))),
+          });
 
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          errorBox.textContent = payload.error || "Не удалось войти";
-          return;
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            errorBox.textContent = payload.error || `Не удалось войти. Код ${response.status}`;
+            return;
+          }
+
+          const next = new URLSearchParams(window.location.search).get("next") || "/admin";
+          window.location.href = next;
+        } catch {
+          errorBox.textContent = "Нет связи с сервером. Проверьте deploy и попробуйте снова.";
+        } finally {
+          button.disabled = false;
+          button.textContent = "Войти";
         }
-
-        const next = new URLSearchParams(window.location.search).get("next") || "/admin";
-        window.location.href = next;
       });
     </script>
   </body>
