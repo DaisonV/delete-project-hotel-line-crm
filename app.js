@@ -600,6 +600,11 @@ function renderCart() {
       .join("") || `<div class="cart-empty">Добавьте товары из витрины</div>`;
 }
 
+function renderCartState() {
+  renderCart();
+  saveState();
+}
+
 function openCart() {
   elements.cartPanel?.classList.add("open");
   document.body.classList.add("cart-open");
@@ -913,7 +918,7 @@ function addToCart(productId) {
   const currentQty = state.cart[productId] || 0;
   state.cart[productId] = currentQty ? currentQty + 1 : product.minQty;
   showToast(currentQty ? "Количество увеличено" : `${product.name}: добавлен минимум ${product.minQty} ${product.unit}`);
-  render();
+  renderCartState();
 }
 
 function changeCartQty(productId, delta) {
@@ -926,7 +931,7 @@ function changeCartQty(productId, delta) {
   } else {
     state.cart[productId] = nextQty;
   }
-  render();
+  renderCartState();
 }
 
 async function createOrder(formData) {
