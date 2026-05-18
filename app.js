@@ -5,6 +5,8 @@ const currency = new Intl.NumberFormat("ru-RU", {
 });
 
 const STORAGE_KEY = "hotel-line-crm-v1";
+const API_ROOT = "/api";
+let apiOnline = false;
 
 const defaultProducts = [
   {
@@ -393,6 +395,44 @@ function normalizeProducts(savedProducts = []) {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+async function apiRequest(path, options = {}) {
+  if (window.location.protocol === "file:") return null;
+
+  try {
+    const response = await fetch(`${API_ROOT}${path}`, options);
+    if (!response.ok) return null;
+    apiOnline = true;
+    if (response.status === 204) return true;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function syncFromApi() {
+  const remoteState = await apiRequest("/state");
+  if (!remoteState) return;
+
+  state = {
+    ...state,
+    products: remoteState.products || [],
+    orders: remoteState.orders || [],
+    leads: remoteState.leads || [],
+  };
+  products = state.products;
+  normalizeCart();
+  renderCategories();
+  render();
+}
+
+function jsonOptions(body, method = "POST") {
+  return {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
 }
 
 function formatMoney(value) {
@@ -789,6 +829,7 @@ function render() {
 
 function addToCart(productId) {
   const product = productById(productId);
+  if (!product) return;
   const currentQty = state.cart[productId] || 0;
   state.cart[productId] = currentQty ? currentQty + 1 : product.minQty;
   showToast(currentQty ? "Количество увеличено" : `${product.name}: добавлен минимум ${product.minQty} ${product.unit}`);
@@ -797,6 +838,7 @@ function addToCart(productId) {
 
 function changeCartQty(productId, delta) {
   const product = productById(productId);
+  if (!product) return;
   const nextQty = (state.cart[productId] || 0) + delta;
   if (nextQty < product.minQty) {
     delete state.cart[productId];
@@ -807,7 +849,7 @@ function changeCartQty(productId, delta) {
   render();
 }
 
-function createOrder(formData) {
+async function createOrder(formData) {
   const entries = Object.entries(state.cart);
   if (!entries.length) {
     showToast("Корзина пустая");
@@ -824,7 +866,7 @@ function createOrder(formData) {
     };
   });
 
-  state.orders.unshift({
+  const orderPayload = {
     id,
     clientName: formData.get("clientName").trim(),
     phone: formData.get("phone").trim(),
@@ -832,31 +874,45 @@ function createOrder(formData) {
     comment: formData.get("comment").trim(),
     createdAt: new Date().toISOString().slice(0, 10),
     items,
-  });
+  };
+
+  const savedOrder = await apiRequest(
+    "/orders",
+    jsonOptions({
+      clientName: orderPayload.clientName,
+      phone: orderPayload.phone,
+      comment: orderPayload.comment,
+      items,
+    }),
+  );
+
+  state.orders.unshift(savedOrder || orderPayload);
   state.cart = {};
   elements.checkoutForm?.reset();
   elements.cartPanel?.classList.remove("open");
   document.body.classList.remove("cart-open");
-  showToast(`Заявка #${id} отправлена. Мы свяжемся с вами.`);
+  showToast(`Заявка #${savedOrder?.id || id} отправлена. Мы свяжемся с вами.`);
   render();
 }
 
-function addLead(formData) {
+async function addLead(formData) {
   const id = Math.max(200, ...state.leads.map((lead) => Number(lead.id))) + 1;
-  state.leads.unshift({
+  const leadPayload = {
     id,
     name: formData.get("name").trim(),
     phone: formData.get("phone").trim(),
     need: formData.get("need"),
     value: Number(formData.get("value") || 0),
     status: "Новый",
-  });
+  };
+  const savedLead = await apiRequest("/leads", jsonOptions(leadPayload));
+  state.leads.unshift(savedLead || leadPayload);
   elements.leadForm?.reset();
   showToast("Лид добавлен в CRM");
   render();
 }
 
-function moveDeal(id, direction) {
+async function moveDeal(id, direction) {
   const numericDirection = Number(direction);
   const targetOrder = state.orders.find((order) => `order-${order.id}` === String(id));
   const targetLead = state.leads.find((lead) => String(lead.id) === String(id));
@@ -866,20 +922,27 @@ function moveDeal(id, direction) {
   const currentIndex = stages.indexOf(deal.status);
   const nextIndex = Math.min(stages.length - 1, Math.max(0, currentIndex + numericDirection));
   deal.status = stages[nextIndex];
+  if (targetOrder) {
+    await apiRequest(`/orders/${targetOrder.id}`, jsonOptions({ status: deal.status }, "PATCH"));
+  }
+  if (targetLead) {
+    await apiRequest(`/leads/${targetLead.id}`, jsonOptions({ status: deal.status }, "PATCH"));
+  }
   showToast(`Статус изменен: ${deal.status}`);
   render();
 }
 
-function moveOrderToNextStatus(orderId) {
+async function moveOrderToNextStatus(orderId) {
   const order = state.orders.find((item) => item.id === Number(orderId));
   if (!order) return;
   const currentIndex = stages.indexOf(order.status);
   order.status = stages[Math.min(stages.length - 1, currentIndex + 1)];
+  await apiRequest(`/orders/${order.id}`, jsonOptions({ status: order.status }, "PATCH"));
   showToast(`Заказ #${order.id}: ${order.status}`);
   render();
 }
 
-function deleteOrder(orderId) {
+async function deleteOrder(orderId) {
   const order = state.orders.find((item) => item.id === Number(orderId));
   if (!order) return;
 
@@ -887,14 +950,15 @@ function deleteOrder(orderId) {
   if (!ok) return;
 
   state.orders = state.orders.filter((item) => item.id !== Number(orderId));
+  await apiRequest(`/orders/${orderId}`, { method: "DELETE" });
   saveState();
   render();
   showToast(`Заявка #${order.id} удалена`);
 }
 
-function deleteDeal(dealId) {
+async function deleteDeal(dealId) {
   if (String(dealId).startsWith("order-")) {
-    deleteOrder(String(dealId).replace("order-", ""));
+    await deleteOrder(String(dealId).replace("order-", ""));
     return;
   }
 
@@ -905,6 +969,7 @@ function deleteDeal(dealId) {
   if (!ok) return;
 
   state.leads = state.leads.filter((item) => String(item.id) !== String(dealId));
+  await apiRequest(`/leads/${dealId}`, { method: "DELETE" });
   saveState();
   render();
   showToast("Лид удален");
@@ -916,7 +981,7 @@ function syncProducts() {
   saveState();
 }
 
-function updateProduct(productId, field, rawValue) {
+async function updateProduct(productId, field, rawValue) {
   const product = productById(productId);
   if (!product) return;
 
@@ -936,10 +1001,11 @@ function updateProduct(productId, field, rawValue) {
   }
 
   syncProducts();
+  await apiRequest(`/products/${encodeURIComponent(productId)}`, jsonOptions(product, "PATCH"));
   render();
 }
 
-function createProduct(formData) {
+async function createProduct(formData) {
   const name = formData.get("name").trim();
   if (!name) return;
 
@@ -957,14 +1023,15 @@ function createProduct(formData) {
       "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=700&q=80",
   };
 
-  products.unshift(product);
+  const savedProduct = await apiRequest("/products", jsonOptions(product));
+  products.unshift(savedProduct || product);
   elements.productForm?.reset();
   syncProducts();
   render();
   showToast("Товар добавлен");
 }
 
-function deleteProduct(productId) {
+async function deleteProduct(productId) {
   const product = productById(productId);
   if (!product) return;
 
@@ -973,6 +1040,7 @@ function deleteProduct(productId) {
 
   products = products.filter((item) => item.id !== productId);
   delete state.cart[productId];
+  await apiRequest(`/products/${encodeURIComponent(productId)}`, { method: "DELETE" });
   syncProducts();
   render();
   showToast("Товар удален");
@@ -985,6 +1053,31 @@ function uploadProductImage(productId, file) {
     return;
   }
 
+  if (apiOnline || window.location.protocol !== "file:") {
+    const formData = new FormData();
+    formData.append("image", file);
+    apiRequest(`/products/${encodeURIComponent(productId)}/image`, {
+      method: "POST",
+      body: formData,
+    }).then((savedProduct) => {
+      if (savedProduct) {
+        const index = products.findIndex((product) => product.id === productId);
+        if (index >= 0) products[index] = savedProduct;
+        syncProducts();
+        render();
+        showToast("Фото товара обновлено");
+        return;
+      }
+
+      readProductImageLocally(productId, file);
+    });
+    return;
+  }
+
+  readProductImageLocally(productId, file);
+}
+
+function readProductImageLocally(productId, file) {
   const reader = new FileReader();
   reader.addEventListener("load", () => {
     updateProduct(productId, "image", reader.result);
@@ -1071,6 +1164,11 @@ function bindEvents() {
   });
 }
 
-renderCategories();
-bindEvents();
-render();
+function initApp() {
+  renderCategories();
+  bindEvents();
+  render();
+  syncFromApi();
+}
+
+initApp();
