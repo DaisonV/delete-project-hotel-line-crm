@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotel Line - админ CRM</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="admin">
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Навигация админки">
+        <a class="brand brand-link" href="index.html" aria-label="Hotel Line">
+          <div class="brand-mark">HL</div>
+          <div>
+            <strong>Hotel Line</strong>
+            <span>админ CRM</span>
+          </div>
+        </a>
+
+        <nav class="nav-list">
+          <button class="nav-button active" type="button" data-view="crm">
+            <span class="nav-icon">01</span>
+            CRM
+          </button>
+          <button class="nav-button" type="button" data-view="orders">
+            <span class="nav-icon">02</span>
+            Заявки
+          </button>
+          <button class="nav-button" type="button" data-view="clients">
+            <span class="nav-icon">03</span>
+            Клиенты
+          </button>
+          <button class="nav-button" type="button" data-view="products">
+            <span class="nav-icon">04</span>
+            Товары
+          </button>
+        </nav>
+
+        <div class="sidebar-note">
+          <span>В работе</span>
+          <strong id="todayRevenue">0 ₸</strong>
+          <small>прогноз выручки по активным заявкам</small>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">панель администратора</p>
+            <h1 id="pageTitle">CRM панель</h1>
+          </div>
+          <div class="topbar-actions">
+            <a class="secondary-button" href="index.html">Открыть сайт</a>
+            <button class="icon-button" type="button" id="seedButton" title="Вернуть демо-данные">↻</button>
+          </div>
+        </header>
+
+        <section class="view active" id="crmView" aria-labelledby="crmHeading">
+          <div class="dashboard-grid">
+            <article class="metric-card">
+              <span>Выручка</span>
+              <strong id="metricRevenue">0 ₸</strong>
+              <small>активные и новые заявки</small>
+            </article>
+            <article class="metric-card">
+              <span>Заявки</span>
+              <strong id="metricOrders">0</strong>
+              <small>в работе</small>
+            </article>
+            <article class="metric-card">
+              <span>Клиенты</span>
+              <strong id="metricClients">0</strong>
+              <small>покупатели и заявки</small>
+            </article>
+            <article class="metric-card">
+              <span>Средний чек</span>
+              <strong id="metricAverage">0 ₸</strong>
+              <small>по всем заявкам</small>
+            </article>
+          </div>
+
+          <div class="crm-grid">
+            <section class="workspace-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">воронка</p>
+                  <h2 id="crmHeading">Сделки</h2>
+                </div>
+              </div>
+              <div class="pipeline" id="pipeline"></div>
+            </section>
+
+            <section class="workspace-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">задача</p>
+                  <h2>Новый контакт</h2>
+                </div>
+              </div>
+              <form class="quick-form" id="leadForm">
+                <label>
+                  Компания
+                  <input name="name" required placeholder="Grand Plaza" />
+                </label>
+                <label>
+                  Телефон
+                  <input name="phone" required placeholder="+7 777 000 00 00" />
+                </label>
+                <label>
+                  Потребность
+                  <select name="need">
+                    <option>Комплектация номеров</option>
+                    <option>Расходники для уборки</option>
+                    <option>Гостиничная косметика</option>
+                    <option>Текстиль и халаты</option>
+                  </select>
+                </label>
+                <label>
+                  Потенциал сделки
+                  <input name="value" type="number" min="0" step="1000" placeholder="250000" />
+                </label>
+                <button class="primary-button full" type="submit">Добавить лид</button>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="ordersView" aria-labelledby="ordersHeading">
+          <section class="workspace-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">продажи</p>
+                <h2 id="ordersHeading">Заявки</h2>
+              </div>
+              <label class="select-field compact">
+                <span>Статус</span>
+                <select id="orderStatusFilter">
+                  <option value="all">Все</option>
+                  <option value="Новый">Новый</option>
+                  <option value="Счет">Счет</option>
+                  <option value="В работе">В работе</option>
+                  <option value="Отгружен">Отгружен</option>
+                </select>
+              </label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Заявка</th>
+                    <th>Клиент</th>
+                    <th>Сумма</th>
+                    <th>Статус</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="ordersTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="clientsView" aria-labelledby="clientsHeading">
+          <section class="workspace-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">база</p>
+                <h2 id="clientsHeading">Клиенты</h2>
+              </div>
+              <label class="search-field compact">
+                <span>Поиск</span>
+                <input id="clientSearch" type="search" placeholder="компания или телефон" />
+              </label>
+            </div>
+            <div class="client-list" id="clientList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="productsView" aria-labelledby="productsHeading">
+          <section class="workspace-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">каталог</p>
+                <h2 id="productsHeading">Товары</h2>
+              </div>
+            </div>
+            <form class="product-create-form" id="productForm">
+              <label>
+                Название
+                <input name="name" required placeholder="Новый товар" />
+              </label>
+              <label>
+                Категория
+                <input name="category" required placeholder="Косметика" />
+              </label>
+              <label>
+                Цена
+                <input name="price" type="number" min="0" step="1" required placeholder="50" />
+              </label>
+              <label>
+                Мин. закупка
+                <input name="minQty" type="number" min="1" step="1" required placeholder="1000" />
+              </label>
+              <label>
+                Ед. изм.
+                <input name="unit" required placeholder="шт." />
+              </label>
+              <label>
+                Склад
+                <input name="stock" type="number" min="0" step="1" placeholder="1000" />
+              </label>
+              <label class="wide-field">
+                Фото URL
+                <input name="image" placeholder="https://..." />
+              </label>
+              <div class="photo-requirements wide-field">
+                <strong>Требования к фото</strong>
+                <span>Квадрат или 4:3, минимум 800x600 px, до 3 МБ. Товар по центру, светлый фон, без текста и коллажей.</span>
+              </div>
+              <label class="wide-field">
+                Описание
+                <textarea name="description" rows="2" placeholder="Краткое описание для сайта"></textarea>
+              </label>
+              <button class="primary-button full" type="submit">Добавить товар</button>
+            </form>
+            <div class="product-editor-list" id="productSettings"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

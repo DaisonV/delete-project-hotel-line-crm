@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotel Line - товары для гостиниц</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="store">
+    <div class="public-shell">
+      <header class="public-header">
+        <a class="brand brand-link" href="index.html" aria-label="Hotel Line">
+          <div class="brand-mark">HL</div>
+          <div>
+            <strong>Hotel Line</strong>
+            <span>товары для гостиниц</span>
+          </div>
+        </a>
+        <div class="topbar-actions">
+          <button class="primary-button" type="button" data-open-cart>
+            Корзина <span id="cartCount">0</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="public-main">
+        <section class="store-layout">
+          <section class="catalog-panel" aria-labelledby="storeHeading">
+            <div class="hero-strip">
+              <div class="hero-copy">
+                <p class="eyebrow">поставка товаров для HoReCa</p>
+                <h1 id="storeHeading">Комплектация гостиниц без лишней переписки</h1>
+                <p>Постель, косметика, уборочный инвентарь и расходники с понятной ценой и минимальным размером закупки.</p>
+              </div>
+              <div class="hero-media" role="img" aria-label="Гостиничный номер с аккуратно подготовленной кроватью"></div>
+            </div>
+
+            <div class="catalog-toolbar">
+              <label class="search-field">
+                <span>Поиск</span>
+                <input id="searchInput" type="search" placeholder="халаты, шампунь, полотенца" />
+              </label>
+              <label class="select-field">
+                <span>Категория</span>
+                <select id="categoryFilter"></select>
+              </label>
+            </div>
+
+            <div class="product-grid" id="productGrid"></div>
+          </section>
+
+          <aside class="cart-panel" aria-label="Корзина" id="cartPanel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">заявка</p>
+                <h2>Корзина</h2>
+              </div>
+              <button class="icon-button cart-close" type="button" data-close-cart title="Закрыть">×</button>
+            </div>
+
+            <div class="cart-items" id="cartItems"></div>
+
+            <form class="checkout-form" id="checkoutForm">
+              <label>
+                Компания или имя
+                <input name="clientName" required placeholder="Hotel Aurora" />
+              </label>
+              <label>
+                Телефон
+                <input name="phone" required placeholder="+7 777 000 00 00" />
+              </label>
+              <label>
+                Комментарий
+                <textarea name="comment" rows="3" placeholder="Доставка, ИИН/БИН, сроки"></textarea>
+              </label>
+              <div class="cart-total">
+                <span>Итого</span>
+                <strong id="cartTotal">0 ₸</strong>
+              </div>
+              <button class="primary-button full" type="submit">Отправить заявку</button>
+            </form>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <div class="cart-overlay" data-close-cart></div>
+    <button class="mobile-cart-bar" type="button" data-open-cart>
+      <span>Корзина</span>
+      <strong id="mobileCartTotal">0 ₸</strong>
+      <small id="mobileCartCount">0</small>
+    </button>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
