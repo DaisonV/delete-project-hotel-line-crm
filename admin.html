@@ -2,7 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Hotel Line - админ CRM</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -205,6 +205,10 @@
               <label>
                 Мин. закупка
                 <input name="minQty" type="number" min="1" step="1" required placeholder="1000" />
+              </label>
+              <label>
+                Шаг заказа
+                <input name="orderStep" type="number" min="1" step="1" required placeholder="20" />
               </label>
               <label>
                 Ед. изм.

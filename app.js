@@ -383,7 +383,7 @@ function loadState() {
 function normalizeProducts(savedProducts = []) {
   const normalizedDefaults = defaultProducts.map((defaultProduct) => {
     const savedProduct = savedProducts.find((product) => product.id === defaultProduct.id);
-    return { ...defaultProduct, ...savedProduct };
+    return normalizeProduct({ ...defaultProduct, ...savedProduct });
   });
   const customProducts = savedProducts.filter((product) => {
     return (
@@ -393,7 +393,18 @@ function normalizeProducts(savedProducts = []) {
     );
   });
 
-  return [...normalizedDefaults, ...customProducts];
+  return [...normalizedDefaults, ...customProducts.map(normalizeProduct)];
+}
+
+function normalizeProduct(product = {}) {
+  const minQty = Math.max(1, Math.floor(Number(product.minQty) || 1));
+  const orderStep = Math.max(1, Math.floor(Number(product.orderStep) || 1));
+  return {
+    ...product,
+    minQty,
+    orderStep,
+    stock: Math.max(0, Math.floor(Number(product.stock) || 0)),
+  };
 }
 
 function saveState() {
@@ -420,7 +431,7 @@ async function syncFromApi() {
 
   state = {
     ...state,
-    products: remoteState.products || [],
+    products: (remoteState.products || []).map(normalizeProduct),
     orders: remoteState.orders || [],
     leads: remoteState.leads || [],
   };
@@ -471,14 +482,26 @@ function normalizeCart() {
       return;
     }
 
-    if (qty < product.minQty) {
-      state.cart[productId] = product.minQty;
-    }
+    state.cart[productId] = normalizeCartQty(product, qty);
   });
 }
 
+function orderStep(product) {
+  return Math.max(1, Math.floor(Number(product.orderStep) || 1));
+}
+
+function normalizeCartQty(product, qty) {
+  const minQty = Math.max(1, Math.floor(Number(product.minQty) || 1));
+  const step = orderStep(product);
+  const requestedQty = Math.floor(Number(qty) || minQty);
+  if (requestedQty <= minQty) return minQty;
+  return minQty + Math.ceil((requestedQty - minQty) / step) * step;
+}
+
 function minQtyLabel(product) {
-  return `Мин. заказ: ${product.minQty} ${product.unit}`;
+  const step = orderStep(product);
+  const stepText = step > 1 ? `, шаг: ${step} ${product.unit}` : "";
+  return `Мин. заказ: ${product.minQty} ${product.unit}${stepText}`;
 }
 
 function orderTotal(order) {
@@ -567,7 +590,7 @@ function renderCart() {
   const count = entries.reduce((sum, [, qty]) => sum + qty, 0);
   const total = entries.reduce((sum, [productId, qty]) => {
     const product = productById(productId);
-    return sum + product.price * qty;
+    return product ? sum + product.price * qty : sum;
   }, 0);
 
   elements.cartCount.textContent = count;
@@ -582,16 +605,20 @@ function renderCart() {
     entries
       .map(([productId, qty]) => {
         const product = productById(productId);
+        if (!product) return "";
         return `
           <div class="cart-line">
-            <div>
+            <div class="cart-line-photo">
+              <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy">
+            </div>
+            <div class="cart-line-info">
               <strong>${escapeHtml(product.name)}</strong>
               <span>${formatMoney(product.price)} за ${escapeHtml(product.unit)}</span>
               <span>${escapeHtml(minQtyLabel(product))}</span>
             </div>
             <div class="qty-control">
               <button class="qty-button" type="button" data-dec="${escapeHtml(product.id)}">−</button>
-              <strong>${qty}</strong>
+              <strong>${normalizeCartQty(product, qty)}</strong>
               <button class="qty-button" type="button" data-inc="${escapeHtml(product.id)}">+</button>
             </div>
           </div>
@@ -873,6 +900,10 @@ function renderProductSettings() {
               <input type="number" min="1" step="1" value="${product.minQty}" data-product-field="minQty" data-product-id="${escapeHtml(product.id)}">
             </label>
             <label>
+              Шаг заказа
+              <input type="number" min="1" step="1" value="${orderStep(product)}" data-product-field="orderStep" data-product-id="${escapeHtml(product.id)}">
+            </label>
+            <label>
               Ед. изм.
               <input value="${escapeHtml(product.unit)}" data-product-field="unit" data-product-id="${escapeHtml(product.id)}">
             </label>
@@ -916,20 +947,21 @@ function addToCart(productId) {
   const product = productById(productId);
   if (!product) return;
   const currentQty = state.cart[productId] || 0;
-  state.cart[productId] = currentQty ? currentQty + 1 : product.minQty;
-  showToast(currentQty ? "Количество увеличено" : `${product.name}: добавлен минимум ${product.minQty} ${product.unit}`);
+  const step = orderStep(product);
+  state.cart[productId] = currentQty ? normalizeCartQty(product, currentQty + step) : product.minQty;
+  showToast(currentQty ? `Добавлено ${step} ${product.unit}` : `${product.name}: добавлен минимум ${product.minQty} ${product.unit}`);
   renderCartState();
 }
 
 function changeCartQty(productId, delta) {
   const product = productById(productId);
   if (!product) return;
-  const nextQty = (state.cart[productId] || 0) + delta;
+  const nextQty = (state.cart[productId] || 0) + delta * orderStep(product);
   if (nextQty < product.minQty) {
     delete state.cart[productId];
     showToast("Товар удален из корзины");
   } else {
-    state.cart[productId] = nextQty;
+    state.cart[productId] = normalizeCartQty(product, nextQty);
   }
   renderCartState();
 }
@@ -942,14 +974,21 @@ async function createOrder(formData) {
   }
 
   const id = Math.max(1000, ...state.orders.map((order) => order.id)) + 1;
-  const items = entries.map(([productId, qty]) => {
-    const product = productById(productId);
-    return {
-      productId,
-      qty: Math.max(qty, product.minQty),
-      price: product.price,
-    };
-  });
+  const items = entries
+    .map(([productId, qty]) => {
+      const product = productById(productId);
+      if (!product) return null;
+      return {
+        productId,
+        qty: normalizeCartQty(product, qty),
+        price: product.price,
+      };
+    })
+    .filter(Boolean);
+  if (!items.length) {
+    showToast("Корзина пустая");
+    return;
+  }
 
   const orderPayload = {
     id,
@@ -1070,18 +1109,19 @@ async function updateProduct(productId, field, rawValue) {
   const product = productById(productId);
   if (!product) return;
 
-  if (["price", "minQty", "stock"].includes(field)) {
+  if (["price", "minQty", "orderStep", "stock"].includes(field)) {
     const value = Number(rawValue);
     if (field === "price") product.price = Math.max(0, value || 0);
     if (field === "minQty") product.minQty = Math.max(1, Math.floor(value || 1));
+    if (field === "orderStep") product.orderStep = Math.max(1, Math.floor(value || 1));
     if (field === "stock") product.stock = Math.max(0, Math.floor(value || 0));
   } else {
     product[field] = String(rawValue || "").trim();
   }
 
-  if (field === "minQty") {
-    if (state.cart[productId] && state.cart[productId] < product.minQty) {
-      state.cart[productId] = product.minQty;
+  if (field === "minQty" || field === "orderStep") {
+    if (state.cart[productId]) {
+      state.cart[productId] = normalizeCartQty(product, state.cart[productId]);
     }
   }
 
@@ -1101,6 +1141,7 @@ async function createProduct(formData) {
     unit: formData.get("unit").trim() || "шт.",
     price: Math.max(0, Number(formData.get("price") || 0)),
     minQty: Math.max(1, Math.floor(Number(formData.get("minQty") || 1))),
+    orderStep: Math.max(1, Math.floor(Number(formData.get("orderStep") || 1))),
     stock: Math.max(0, Math.floor(Number(formData.get("stock") || 0))),
     description: formData.get("description").trim(),
     image:

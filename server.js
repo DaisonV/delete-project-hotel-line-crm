@@ -109,6 +109,7 @@ function toProduct(row) {
     unit: row.unit,
     price: Number(row.price),
     minQty: Number(row.min_qty),
+    orderStep: Number(row.order_step || 1),
     stock: Number(row.stock),
     description: row.description || "",
     image: row.image || "",
@@ -132,6 +133,14 @@ function formatMoney(value) {
     currency: "KZT",
     maximumFractionDigits: 0,
   }).format(Number(value || 0));
+}
+
+function normalizeOrderQty(product, qty) {
+  const minQty = Math.max(1, Math.floor(Number(product.min_qty || product.minQty) || 1));
+  const orderStep = Math.max(1, Math.floor(Number(product.order_step || product.orderStep) || 1));
+  const requestedQty = Math.floor(Number(qty) || minQty);
+  if (requestedQty <= minQty) return minQty;
+  return minQty + Math.ceil((requestedQty - minQty) / orderStep) * orderStep;
 }
 
 async function notifyTelegram(order) {
@@ -188,6 +197,7 @@ async function initDb() {
       unit TEXT NOT NULL DEFAULT 'шт.',
       price NUMERIC NOT NULL DEFAULT 0,
       min_qty INTEGER NOT NULL DEFAULT 1,
+      order_step INTEGER NOT NULL DEFAULT 1,
       stock INTEGER NOT NULL DEFAULT 0,
       description TEXT NOT NULL DEFAULT '',
       image TEXT NOT NULL DEFAULT '',
@@ -222,6 +232,8 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+
+  await pool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS order_step INTEGER NOT NULL DEFAULT 1");
 
   const { rows } = await pool.query("SELECT COUNT(*)::int AS count FROM products");
   if (rows[0].count === 0) {
@@ -350,12 +362,20 @@ app.post("/api/orders", async (req, res, next) => {
       [clientName, phone, comment],
     );
     const order = orderResult.rows[0];
+    let insertedItems = 0;
     for (const item of items) {
+      const productResult = await client.query("SELECT * FROM products WHERE id = $1", [item.productId]);
+      const product = productResult.rows[0];
+      if (!product) continue;
       await client.query(
         `INSERT INTO order_items (order_id, product_id, qty, price)
          VALUES ($1, $2, $3, $4)`,
-        [order.id, item.productId, item.qty, item.price],
+        [order.id, product.id, normalizeOrderQty(product, item.qty), product.price],
       );
+      insertedItems += 1;
+    }
+    if (!insertedItems) {
+      throw new Error("Order has no valid items");
     }
     await client.query("COMMIT");
     const savedOrder = (await getState()).orders.find((item) => item.id === order.id);
@@ -427,9 +447,11 @@ app.delete("/api/leads/:id", requireAdminApi, async (req, res, next) => {
 app.post("/api/products", requireAdminApi, async (req, res, next) => {
   try {
     const product = req.body;
+    const minQty = Math.max(1, Math.floor(Number(product.minQty) || 1));
+    const orderStep = Math.max(1, Math.floor(Number(product.orderStep) || 1));
     const result = await pool.query(
-      `INSERT INTO products (id, name, category, unit, price, min_qty, stock, description, image)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO products (id, name, category, unit, price, min_qty, order_step, stock, description, image)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         product.id,
@@ -437,7 +459,8 @@ app.post("/api/products", requireAdminApi, async (req, res, next) => {
         product.category,
         product.unit,
         product.price,
-        product.minQty,
+        minQty,
+        orderStep,
         product.stock,
         product.description || "",
         product.image || "",
@@ -452,18 +475,21 @@ app.post("/api/products", requireAdminApi, async (req, res, next) => {
 app.patch("/api/products/:id", requireAdminApi, async (req, res, next) => {
   try {
     const product = req.body;
+    const minQty = Math.max(1, Math.floor(Number(product.minQty) || 1));
+    const orderStep = Math.max(1, Math.floor(Number(product.orderStep) || 1));
     const result = await pool.query(
       `UPDATE products
        SET name = $1, category = $2, unit = $3, price = $4, min_qty = $5,
-           stock = $6, description = $7, image = $8, updated_at = now()
-       WHERE id = $9
+           order_step = $6, stock = $7, description = $8, image = $9, updated_at = now()
+       WHERE id = $10
        RETURNING *`,
       [
         product.name,
         product.category,
         product.unit,
         product.price,
-        product.minQty,
+        minQty,
+        orderStep,
         product.stock,
         product.description || "",
         product.image || "",

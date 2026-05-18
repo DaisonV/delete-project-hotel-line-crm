@@ -21,6 +21,10 @@
   box-sizing: border-box;
 }
 
+html {
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -49,6 +53,8 @@ textarea {
 
 button {
   cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .app-shell {
@@ -473,8 +479,10 @@ textarea {
   border-radius: 8px;
   background: #fff;
   color: var(--ink);
+  font-size: 16px;
   outline: none;
   padding: 8px 10px;
+  touch-action: manipulation;
 }
 
 textarea {
@@ -649,20 +657,46 @@ textarea:focus {
 
 .cart-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
   gap: 10px;
+  align-items: center;
   padding: 9px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
 }
 
-.cart-line strong,
-.cart-line span {
+.cart-line-photo {
+  width: 54px;
+  height: 54px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.cart-line-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.cart-line-info {
+  min-width: 0;
+}
+
+.cart-line-info strong,
+.cart-line-info span {
   display: block;
 }
 
-.cart-line span {
+.cart-line-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-line-info span {
   margin-top: 2px;
   color: var(--muted);
   font-size: 13px;
@@ -1509,11 +1543,18 @@ th {
   }
 
   .cart-line {
-    grid-template-columns: 1fr;
+    grid-template-columns: 50px minmax(0, 1fr);
+    align-items: start;
   }
 
   .qty-control {
+    grid-column: 1 / -1;
     justify-content: space-between;
+  }
+
+  .cart-line-photo {
+    width: 50px;
+    height: 50px;
   }
 
   .checkout-form {
