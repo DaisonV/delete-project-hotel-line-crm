@@ -557,6 +557,7 @@ function renderProducts() {
   elements.productGrid.innerHTML =
     filtered
       .map((product) => {
+        const qty = state.cart[product.id] || 0;
         return `
           <article class="product-card">
             <div class="product-photo">
@@ -574,14 +575,28 @@ function renderProducts() {
                 <span>за ${escapeHtml(product.unit)}</span>
               </div>
             </div>
-            <button class="primary-button full add-product-button" type="button" data-add-product="${escapeHtml(product.id)}" aria-label="Добавить ${escapeHtml(product.name)} в корзину">
-              <span aria-hidden="true">+</span>
-              <em>Добавить</em>
-            </button>
+            <div class="product-qty-control${qty ? " has-items" : ""}" data-product-control="${escapeHtml(product.id)}">
+              <button class="qty-button" type="button" data-dec="${escapeHtml(product.id)}" aria-label="Уменьшить ${escapeHtml(product.name)}" ${qty ? "" : "disabled"}>−</button>
+              <strong data-product-qty="${escapeHtml(product.id)}">${qty}</strong>
+              <button class="qty-button accent-qty-button" type="button" data-add-product="${escapeHtml(product.id)}" aria-label="Добавить ${escapeHtml(product.name)}">+</button>
+            </div>
           </article>
         `;
       })
       .join("") || `<div class="empty-state">Товары не найдены</div>`;
+}
+
+function renderProductControls() {
+  if (!elements.productGrid) return;
+  elements.productGrid.querySelectorAll("[data-product-control]").forEach((control) => {
+    const productId = control.dataset.productControl;
+    const qty = state.cart[productId] || 0;
+    control.classList.toggle("has-items", qty > 0);
+    const qtyElement = control.querySelector("[data-product-qty]");
+    const decButton = control.querySelector("[data-dec]");
+    if (qtyElement) qtyElement.textContent = qty;
+    if (decButton) decButton.disabled = qty <= 0;
+  });
 }
 
 function renderCart() {
@@ -629,6 +644,7 @@ function renderCart() {
 
 function renderCartState() {
   renderCart();
+  renderProductControls();
   saveState();
 }
 

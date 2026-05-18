@@ -610,6 +610,39 @@ textarea:focus {
   font-weight: 650;
 }
 
+.product-qty-control {
+  display: grid;
+  grid-template-columns: 34px minmax(48px, 1fr) 34px;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 38px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.product-qty-control strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-qty-control.has-items {
+  border-color: rgba(37, 99, 235, 0.22);
+  background: #f8fbff;
+}
+
+.product-qty-control.has-items strong {
+  color: var(--ink);
+}
+
 .cart-panel {
   position: sticky;
   top: 18px;
@@ -714,6 +747,17 @@ textarea:focus {
   border-color: var(--line);
   background: var(--surface);
   font-weight: 650;
+}
+
+.qty-button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.accent-qty-button {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .checkout-form,
@@ -1510,31 +1554,23 @@ th {
     font-size: 17px;
   }
 
-  .product-card .primary-button {
+  .product-qty-control {
     grid-column: 2;
     justify-self: end;
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    min-height: 40px;
-    padding: 0;
-    border-radius: 8px;
+    grid-template-columns: 34px minmax(38px, 1fr) 34px;
+    width: min(130px, 100%);
+    min-height: 38px;
+    gap: 5px;
+    padding: 3px;
   }
 
-  .product-card .add-product-button span {
-    min-width: 0;
-    padding: 0;
-    background: transparent;
-    font-size: 24px;
-    line-height: 1;
+  .product-qty-control .qty-button {
+    width: 32px;
+    height: 32px;
   }
 
-  .product-card .add-product-button em {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
+  .product-qty-control strong {
+    font-size: 13px;
   }
 
   .cart-panel {
@@ -1543,13 +1579,13 @@ th {
   }
 
   .cart-line {
-    grid-template-columns: 50px minmax(0, 1fr);
-    align-items: start;
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    align-items: center;
   }
 
   .qty-control {
-    grid-column: 1 / -1;
-    justify-content: space-between;
+    grid-column: auto;
+    justify-content: flex-end;
   }
 
   .cart-line-photo {
