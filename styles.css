@@ -268,6 +268,10 @@ button {
   width: 100%;
 }
 
+.add-product-button em {
+  font-style: normal;
+}
+
 .primary-button span {
   min-width: 24px;
   padding: 2px 7px;
@@ -1135,7 +1139,7 @@ th {
 
 @media (max-width: 820px) {
   body[data-page="store"] {
-    padding-bottom: 84px;
+    padding-bottom: calc(86px + env(safe-area-inset-bottom));
   }
 
   .app-shell {
@@ -1274,18 +1278,18 @@ th {
 
   .mobile-cart-bar {
     position: fixed;
-    right: 14px;
-    bottom: calc(12px + env(safe-area-inset-bottom));
-    left: 14px;
+    right: 0;
+    bottom: 0;
+    left: 0;
     z-index: 15;
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 12px;
     align-items: center;
-    min-height: 52px;
-    padding: 0 13px;
+    min-height: calc(58px + env(safe-area-inset-bottom));
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
     border: 0;
-    border-radius: 8px;
+    border-radius: 14px 14px 0 0;
     background: var(--accent);
     color: #fff;
     box-shadow: 0 10px 26px rgba(37, 99, 235, 0.22);
@@ -1307,11 +1311,23 @@ th {
 
   .mobile-cart-bar small {
     display: grid;
-    min-width: 28px;
-    height: 28px;
+    min-width: 30px;
+    height: 30px;
     place-items: center;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.18);
+  }
+
+  .mobile-cart-title {
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-cart-bar strong {
+    white-space: nowrap;
   }
 }
 
@@ -1382,15 +1398,15 @@ th {
   }
 
   .product-card {
-    grid-template-columns: 104px minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 12px;
     padding: 10px;
   }
 
   .product-photo {
     grid-row: span 4;
-    width: 104px;
-    height: 120px;
+    width: 132px;
+    height: 128px;
     aspect-ratio: auto;
   }
 
@@ -1403,8 +1419,8 @@ th {
   }
 
   .price-row {
-    display: grid;
-    gap: 3px;
+    display: block;
+    min-width: 0;
   }
 
   .price-row strong {
@@ -1412,7 +1428,30 @@ th {
   }
 
   .product-card .primary-button {
-    grid-column: 1 / -1;
+    grid-column: 2;
+    justify-self: end;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    border-radius: 8px;
+  }
+
+  .product-card .add-product-button span {
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .product-card .add-product-button em {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
   }
 
   .cart-panel {
@@ -1505,5 +1544,20 @@ th {
   .product-editor-photo {
     width: 100%;
     height: 220px;
+  }
+}
+
+@media (max-width: 380px) {
+  .product-card {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+
+  .product-photo {
+    width: 120px;
+  }
+
+  .mobile-cart-bar {
+    padding-right: 12px;
+    padding-left: 12px;
   }
 }

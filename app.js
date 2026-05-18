@@ -551,8 +551,9 @@ function renderProducts() {
                 <span>за ${escapeHtml(product.unit)}</span>
               </div>
             </div>
-            <button class="primary-button full" type="button" data-add-product="${escapeHtml(product.id)}">
-              Добавить
+            <button class="primary-button full add-product-button" type="button" data-add-product="${escapeHtml(product.id)}" aria-label="Добавить ${escapeHtml(product.name)} в корзину">
+              <span aria-hidden="true">+</span>
+              <em>Добавить</em>
             </button>
           </article>
         `;
