@@ -21,6 +21,9 @@ npm start
 
 ```bash
 DATABASE_URL=postgres://user:password@host:5432/database
+ADMIN_USER=admin
+ADMIN_PASSWORD=secure-password
+SESSION_SECRET=long-random-string
 ```
 
 Для локальных фото можно оставить стандартную папку `uploads/`.
@@ -51,4 +54,15 @@ DATABASE_URL=postgres://user:password@host:5432/database
 
 - `/` - клиентская витрина
 - `/admin.html` или `/admin` - админка/CRM
+- `/login.html` или `/login` - вход в админку
 - `/api/health` - проверка API
+
+## Админка
+
+Доступ к админке защищен сессией.
+
+На Render задай или сохрани переменные:
+
+- `ADMIN_USER`
+- `ADMIN_PASSWORD`
+- `SESSION_SECRET`

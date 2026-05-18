@@ -343,6 +343,7 @@ const elements = {
   clientList: document.querySelector("#clientList"),
   clientSearch: document.querySelector("#clientSearch"),
   seedButton: document.querySelector("#seedButton"),
+  logoutButton: document.querySelector("#logoutButton"),
   toast: document.querySelector("#toast"),
   todayRevenue: document.querySelector("#todayRevenue"),
   metricRevenue: document.querySelector("#metricRevenue"),
@@ -425,6 +426,14 @@ async function syncFromApi() {
   normalizeCart();
   renderCategories();
   render();
+}
+
+async function ensureAdminSession() {
+  if (!isAdminPage || window.location.protocol === "file:") return;
+  const session = await apiRequest("/session");
+  if (session && !session.authenticated) {
+    window.location.href = `/login.html?next=${encodeURIComponent(window.location.pathname)}`;
+  }
 }
 
 function jsonOptions(body, method = "POST") {
@@ -1162,12 +1171,18 @@ function bindEvents() {
     render();
     showToast("Демо-данные восстановлены");
   });
+
+  elements.logoutButton?.addEventListener("click", async () => {
+    await apiRequest("/logout", { method: "POST" });
+    window.location.href = "/login.html";
+  });
 }
 
 function initApp() {
   renderCategories();
   bindEvents();
   render();
+  ensureAdminSession();
   syncFromApi();
 }
 

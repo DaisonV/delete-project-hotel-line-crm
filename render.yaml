@@ -16,6 +16,12 @@ services:
         value: /var/data/uploads
       - key: PGSSL
         value: "false"
+      - key: ADMIN_USER
+        value: admin
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
     disk:
       name: hotel-line-uploads
       mountPath: /var/data

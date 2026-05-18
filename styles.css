@@ -112,6 +112,12 @@ button {
   font-weight: 650;
 }
 
+.brand-mark svg {
+  width: 30px;
+  height: 30px;
+  fill: currentColor;
+}
+
 .brand strong,
 .brand span {
   display: block;
@@ -275,6 +281,47 @@ button {
   font-size: 14px;
   font-weight: 650;
   text-decoration: none;
+}
+
+.login-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(247, 248, 250, 0.94)),
+    var(--bg);
+}
+
+.login-panel {
+  width: min(420px, 100%);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.login-brand {
+  margin-bottom: 28px;
+}
+
+.login-copy h1 {
+  margin: 0 0 18px;
+  font-size: 30px;
+  font-weight: 650;
+}
+
+.login-form {
+  display: grid;
+  gap: 14px;
+}
+
+.login-error {
+  min-height: 18px;
+  margin: 0;
+  color: var(--red);
+  font-size: 13px;
 }
 
 .secondary-button {
@@ -1006,31 +1053,37 @@ th {
   }
 
   .sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 9;
+    position: static;
     height: auto;
-    padding: 12px;
+    padding: 12px 12px 10px;
     gap: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   .nav-list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
     gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
 
   .nav-button {
-    justify-content: center;
-    min-height: 40px;
-    padding: 7px;
-    flex-direction: column;
-    gap: 4px;
-    font-size: 11px;
-    line-height: 1.1;
+    flex: 0 0 auto;
+    width: auto;
+    justify-content: flex-start;
+    min-height: 38px;
+    padding: 7px 10px;
+    flex-direction: row;
+    gap: 7px;
+    font-size: 13px;
+    line-height: 1.2;
   }
 
   .nav-icon {
-    font-size: 11px;
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
   }
 
   .sidebar-note {
@@ -1067,10 +1120,12 @@ th {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+    gap: 12px;
   }
 
   .topbar .topbar-actions {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .topbar-actions .primary-button {
@@ -1171,6 +1226,14 @@ th {
 }
 
 @media (max-width: 520px) {
+  .login-panel {
+    padding: 22px;
+  }
+
+  .login-copy h1 {
+    font-size: 26px;
+  }
+
   .public-main {
     padding: 10px;
   }

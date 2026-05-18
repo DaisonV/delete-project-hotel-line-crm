@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hotel Line - вход</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="login">
+    <main class="login-shell">
+      <section class="login-panel">
+        <a class="brand brand-link login-brand" href="index.html" aria-label="Hotel Line">
+          <div class="brand-mark">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <path d="M10 10h8v28h-8V10Zm20 0h8v28h-8V27H18v-6h12V10Z"></path>
+            </svg>
+          </div>
+          <div>
+            <strong>Hotel Line</strong>
+            <span>административный доступ</span>
+          </div>
+        </a>
+
+        <div class="login-copy">
+          <p class="eyebrow">secure area</p>
+          <h1>Вход в админку</h1>
+        </div>
+
+        <form class="login-form" id="loginForm">
+          <label>
+            Логин
+            <input name="username" autocomplete="username" required />
+          </label>
+          <label>
+            Пароль
+            <input name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <p class="login-error" id="loginError"></p>
+          <button class="primary-button full" type="submit">Войти</button>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#loginForm");
+      const errorBox = document.querySelector("#loginError");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorBox.textContent = "";
+
+        const response = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(Object.fromEntries(new FormData(form))),
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          errorBox.textContent = payload.error || "Не удалось войти";
+          return;
+        }
+
+        const next = new URLSearchParams(window.location.search).get("next") || "/admin";
+        window.location.href = next;
+      });
+    </script>
+  </body>
+</html>

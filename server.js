@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
+const session = require("express-session");
+const connectPgSimple = require("connect-pg-simple");
 const multer = require("multer");
 const { Pool } = require("pg");
 
@@ -18,6 +20,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : false,
 });
+const PgSession = connectPgSimple(session);
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -57,6 +60,45 @@ const seedProducts = [
 
 app.use(express.json({ limit: "1mb" }));
 app.use("/uploads", express.static(uploadDir));
+app.use(
+  session({
+    store: new PgSession({
+      pool,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
+    }),
+    name: "hotel_line.sid",
+    secret: process.env.SESSION_SECRET || "dev-session-secret-change-me",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 1000 * 60 * 60 * 12,
+    },
+  }),
+);
+
+function isAdmin(req) {
+  return Boolean(req.session?.admin);
+}
+
+function requireAdminPage(req, res, next) {
+  if (isAdmin(req)) {
+    next();
+    return;
+  }
+  res.redirect(`/login.html?next=${encodeURIComponent(req.originalUrl)}`);
+}
+
+function requireAdminApi(req, res, next) {
+  if (isAdmin(req)) {
+    next();
+    return;
+  }
+  res.status(401).json({ error: "Unauthorized" });
+}
 
 function toProduct(row) {
   return {
@@ -197,6 +239,36 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/api/session", (req, res) => {
+  res.json({ authenticated: isAdmin(req) });
+});
+
+app.post("/api/login", (req, res) => {
+  const expectedUser = process.env.ADMIN_USER || "admin";
+  const expectedPassword = process.env.ADMIN_PASSWORD || "admin";
+  const { username, password } = req.body;
+
+  if (username === expectedUser && password === expectedPassword) {
+    req.session.admin = true;
+    req.session.username = username;
+    res.json({ ok: true });
+    return;
+  }
+
+  res.status(401).json({ error: "Неверный логин или пароль" });
+});
+
+app.post("/api/logout", requireAdminApi, (req, res, next) => {
+  req.session.destroy((error) => {
+    if (error) {
+      next(error);
+      return;
+    }
+    res.clearCookie("hotel_line.sid");
+    res.json({ ok: true });
+  });
+});
+
 app.get("/api/state", async (_req, res, next) => {
   try {
     res.json(await getState());
@@ -234,7 +306,7 @@ app.post("/api/orders", async (req, res, next) => {
   }
 });
 
-app.patch("/api/orders/:id", async (req, res, next) => {
+app.patch("/api/orders/:id", requireAdminApi, async (req, res, next) => {
   try {
     const { status } = req.body;
     await pool.query("UPDATE orders SET status = $1 WHERE id = $2", [status, req.params.id]);
@@ -244,7 +316,7 @@ app.patch("/api/orders/:id", async (req, res, next) => {
   }
 });
 
-app.delete("/api/orders/:id", async (req, res, next) => {
+app.delete("/api/orders/:id", requireAdminApi, async (req, res, next) => {
   try {
     await pool.query("DELETE FROM orders WHERE id = $1", [req.params.id]);
     res.status(204).end();
@@ -253,7 +325,7 @@ app.delete("/api/orders/:id", async (req, res, next) => {
   }
 });
 
-app.post("/api/leads", async (req, res, next) => {
+app.post("/api/leads", requireAdminApi, async (req, res, next) => {
   try {
     const { name, phone, need, value = 0 } = req.body;
     const result = await pool.query(
@@ -268,7 +340,7 @@ app.post("/api/leads", async (req, res, next) => {
   }
 });
 
-app.patch("/api/leads/:id", async (req, res, next) => {
+app.patch("/api/leads/:id", requireAdminApi, async (req, res, next) => {
   try {
     const { status } = req.body;
     const result = await pool.query("UPDATE leads SET status = $1 WHERE id = $2 RETURNING *", [status, req.params.id]);
@@ -278,7 +350,7 @@ app.patch("/api/leads/:id", async (req, res, next) => {
   }
 });
 
-app.delete("/api/leads/:id", async (req, res, next) => {
+app.delete("/api/leads/:id", requireAdminApi, async (req, res, next) => {
   try {
     await pool.query("DELETE FROM leads WHERE id = $1", [req.params.id]);
     res.status(204).end();
@@ -287,7 +359,7 @@ app.delete("/api/leads/:id", async (req, res, next) => {
   }
 });
 
-app.post("/api/products", async (req, res, next) => {
+app.post("/api/products", requireAdminApi, async (req, res, next) => {
   try {
     const product = req.body;
     const result = await pool.query(
@@ -312,7 +384,7 @@ app.post("/api/products", async (req, res, next) => {
   }
 });
 
-app.patch("/api/products/:id", async (req, res, next) => {
+app.patch("/api/products/:id", requireAdminApi, async (req, res, next) => {
   try {
     const product = req.body;
     const result = await pool.query(
@@ -339,7 +411,7 @@ app.patch("/api/products/:id", async (req, res, next) => {
   }
 });
 
-app.post("/api/products/:id/image", upload.single("image"), async (req, res, next) => {
+app.post("/api/products/:id/image", requireAdminApi, upload.single("image"), async (req, res, next) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: "Image file is required" });
@@ -356,7 +428,7 @@ app.post("/api/products/:id/image", upload.single("image"), async (req, res, nex
   }
 });
 
-app.delete("/api/products/:id", async (req, res, next) => {
+app.delete("/api/products/:id", requireAdminApi, async (req, res, next) => {
   try {
     await pool.query("DELETE FROM products WHERE id = $1", [req.params.id]);
     res.status(204).end();
@@ -373,12 +445,20 @@ app.get("/index.html", (_req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.get("/admin", (_req, res) => {
+app.get("/admin", requireAdminPage, (_req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 
-app.get("/admin.html", (_req, res) => {
+app.get("/admin.html", requireAdminPage, (_req, res) => {
   res.sendFile(path.join(__dirname, "admin.html"));
+});
+
+app.get("/login", (_req, res) => {
+  res.sendFile(path.join(__dirname, "login.html"));
+});
+
+app.get("/login.html", (_req, res) => {
+  res.sendFile(path.join(__dirname, "login.html"));
 });
 
 app.get("/app.js", (_req, res) => {
